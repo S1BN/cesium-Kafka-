@@ -1,0 +1,429 @@
+
+html, body, #mainViewer {
+    /* 尺寸 */
+    width: 100%;
+    height: 100%;
+    /* 外边距与内边距 */
+    margin: 0;
+    padding: 0;
+    /* 滚动条 */
+    overflow: hidden;
+    /* 全局字体 */
+    /* font-family: 'Inter', sans-serif; */
+}
+
+.html-image-container {
+    padding: 20px;
+    text-align: center;
+}
+.html-image {
+    max-width: 500px;
+    border: 2px solid #333;
+    border-radius: 5px;
+}
+
+
+
+
+.header-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 70%;
+    height: 40px;
+    z-index: 1001;
+    background: linear-gradient(180deg, rgba(20, 24, 35, 0.9) 0%, rgba(42, 42, 42, 0.7) 100%);
+    border-bottom: 1px solid rgba(0, 191, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+}
+/* 指示器的灯泡 */
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.status-connected {background-color: #4CAF50;}
+.status-disconnected {background-color: #F44336;}
+.status-connectionError {background-color: #f5f102;} 
+
+.header-item {
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-item:last-child {
+    border-right: none;
+}
+
+.header-item span {
+    color: #00dfff;
+    font-weight: bold;
+    margin-left: 5px;
+}
+
+.count-friend { color: #ffff00 !important; } /* 黄色对应我方 */
+.count-enemy { color: #ff0000 !important; }  /* 红色对应敌方 */
+
+
+/* 星群检视按钮样式：放在左上方 */
+.inspection-btn {
+    position: absolute;
+    top: 60px; /* 避开顶栏 */
+    left: 350px;
+    z-index: 1000;
+    padding: 8px 15px;
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.9) 0%, rgba(20, 24, 35, 0.9) 100%);
+    color: white;
+    border: 1px solid rgba(0, 191, 255, 0.5);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.inspection-btn:hover {
+    background: rgba(0, 191, 255, 0.2);
+    border-color: #00dfff;
+}
+
+/* 副窗口容器*/
+#subViewer {
+    width: 250px;
+    height: 250px;
+    position: fixed;
+    top: 100px;
+    left: 350px;
+    z-index: 10;
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    display:none;
+}
+
+
+/* 左右大容器基础设定：统一边框、颜色与阴影 */
+.side-panel-container {
+    position: absolute;
+    
+    width: 320px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(20, 24, 35, 0.85);
+    border: 1px solid rgba(0, 191, 255, 0.5); /* 统一青蓝色边框 */
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    overflow: hidden; /* 保证内部抽屉拼接时不会刺破圆角 */
+    transition: all 0.3s ease;
+}
+
+.left-container {top: 50px; left: 10px; }
+.right-container {top: 7px; right: 5px; }
+
+/* 悬浮整个大容器时的统一发光效果 */
+.side-panel-container:has(.panel-header:hover) {
+    border-color: rgba(0, 191, 255, 1);
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
+}
+
+/* 内部面板块：底部画线，最后一个不画线实现无缝拼接 */
+.panel-box {
+    border-bottom: 1px solid rgba(0, 191, 255, 0.3);
+}
+.panel-box:last-child {
+    border-bottom: none;
+}
+
+/* 统一的标题栏交互 */
+.panel-header {
+    padding: 10px 15px;
+    background: linear-gradient(180deg, rgba(42, 42, 42, 0.9) 0%, rgba(20, 24, 35, 0.9) 100%);
+    font-size: 14px;
+    font-weight: bold;
+    color: #00dfff; /* 统一青色字体 */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    user-select: none;
+    transition: background 0.3s ease;
+}
+
+.panel-header:hover {
+    background: linear-gradient(180deg, rgba(60, 60, 60, 0.9) 0%, rgba(30, 35, 45, 0.9) 100%);
+    color: #ffffff;
+}
+
+.panel-icon {
+    font-size: 12px;
+    margin-right: 8px;
+    color: #00dfff;
+}
+/* ✅ 替换为现代卷帘门动画逻辑 */
+.panel-content {
+    max-height: 0;          /* 默认高度为0，隐藏内容 */
+    overflow: hidden;       /* 隐藏超出的部分 */
+    background-color: rgba(0, 0, 0, 0.4);
+    transition: max-height 0.3s ease-in-out; /* 丝滑的下拉动画 */
+}
+
+.panel-content.show {
+    max-height: 200px;      /* 展开时恢复高度 */
+    overflow-y: auto;       /*超出部分允许滚动 */
+}
+
+/* 列表统一样式 (任务表与链路表复用) */
+.unified-list {
+    list-style: none;
+    margin: 0;
+    padding: 10px;
+}
+.unified-list li {
+    padding: 8px 6px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+    font-size: 13px;
+    color: #fff;
+    cursor: pointer;
+}
+.unified-list li:last-child { border-bottom: none; }
+.unified-list li:hover { background-color: rgba(255, 255, 255, 0.1); }
+
+/* ================= 任务列表中选中任务的高亮效果 ================= */
+.active-mission {
+    background-color: rgba(0, 191, 255, 0.25) !important; /* 青色半透明背景 */
+    border-left: 4px solid #00dfff !important;           /* 左侧指示条 */
+    box-shadow: inset 0 0 15px rgba(0, 191, 255, 0.4);   /* 内发光效果 */
+    transition: all 0.2s ease;
+}
+
+/* 确保鼠标悬浮时不会覆盖选中状态的样式 */
+.unified-list li.active-mission:hover {
+    background-color: rgba(0, 191, 255, 0.35) !important; 
+}
+
+/* 轨道根数专用网格样式 */
+.orbit-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 每行显示3个参数 */
+    gap: 4px;
+    margin-top: 5px;
+    padding-left: 10px;
+    font-family: 'Courier New', Courier, monospace; /* 等宽字体更整齐 */
+}
+
+.orbit-item {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.orbit-val {
+    color: #00dfff;
+    margin-left: 3px;
+}
+
+.orbit-list li {
+    border-bottom: 1px solid rgba(0, 191, 255, 0.1) !important;
+    padding: 10px 6px !important;
+}
+
+
+/* ================= 播放/暂停控制键 ================= */
+.play-pause-btn {
+    position: absolute;
+    top: 7px;
+    right: 438px; /* 位于Cesium默认Home按键的左侧 */
+    z-index: 1000;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(20, 24, 35, 0.85);
+    border: 1px solid rgba(0, 191, 255, 0.5);
+    border-radius: 4px;
+    color: #00dfff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.play-pause-btn:hover {
+    background-color: rgba(0, 191, 255, 0.3);
+    border-color: #00dfff;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.6);
+}
+
+/* ================= 调整 Cesium 默认信息框 (InfoBox) 的位置 ================= */
+.cesium-infoBox {
+    /* 默认是在右上角 (top: 0; right: 0;)，你可以通过修改下面这两个值来移动它 */
+    top: 800px !important;    /* 比如向下移动 80px，避开你的顶部导航栏 */
+    right: 0px !important;  /* 距离右侧边缘留出 20px 的空隙 */
+    
+    /* 如果你想把它完全移到屏幕左边，可以取消注释下面两行：*/
+    /* right: auto !important;
+    left: 350px !important;  */
+    
+    /* 你甚至可以顺手调整一下它的层级、透明度或圆角，让它和你的 UI 更搭 */
+    border-radius: 8px !important; 
+
+}
+
+/* 1. 先取消父容器的约束 */
+.cesium-viewer-toolbar {
+    position: static !important; 
+}
+
+/* 2. 单独控制主页键（HomeButton）的位置 */
+.cesium-home-button {
+    position: absolute !important;
+    top: 5px !important;
+    right: 327px !important; 
+    width: 32px;
+    height: 32px;
+}
+
+/* 3. 单独控制2D/3D切换键（SceneModePicker）的位置 */
+.cesium-sceneModePicker-wrapper {
+    position: absolute !important;
+    top: 7px !important;
+    right: 363px !important; 
+    width: 32px;
+    height: 32px;
+}
+
+/* ================= 调整 Cesium 全屏按钮的位置 ================= */
+.cesium-viewer-fullscreenContainer {
+    position: absolute !important;
+    top: 7px !important; /* 距离底部的距离，可以根据你的面板高度调整 */
+    right: 402px !important;  /* 【关键】必须把默认的靠右定位取消掉，否则 left 会失效 */
+    width: 32px;
+    height: 32px;
+    border-radius: 4px !important; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
+}
+
+
+/* ================= 倍速控制器样式 ================= */
+.speed-control-bar {
+    position: absolute;
+    top: 50px; 
+    left:350px;
+    width: 500px; 
+    height: 60px;
+    z-index: 1000;
+    background: linear-gradient(180deg, rgba(30, 35, 45, 0.85) 0%, rgba(15, 18, 25, 0.85) 100%);
+    border-bottom: 1px solid rgba(0, 191, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* 左右两端对齐 */
+    padding: 0 25px;
+    box-sizing: border-box;
+    color: #00dfff;
+    font-size: 13px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* 下拉菜单科技风美化 */
+.tech-select {
+    background-color: rgba(20, 24, 35, 0.9);
+    color: #00dfff;
+    border: 1px solid rgba(0, 191, 255, 0.5);
+    padding: 2px 8px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+    font-weight: bold;
+}
+
+.tech-select:hover {
+    border-color: #00dfff;
+    box-shadow: 0 0 8px rgba(0, 191, 255, 0.4);
+}
+
+.tech-select option {
+    background-color: rgba(20, 24, 35, 0.9);
+    color: #fff;
+}
+
+
+/* ================= 任务完成/失效状态 ================= */
+.mission-completed {
+    color: #666 !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    pointer-events: none !important; /* 禁用点击交互 */
+    text-decoration: line-through;   /* 添加删除线 */
+    border-left: 4px solid #555 !important;
+    opacity: 0.6;
+}
+
+.mission-completed .count-friend,
+.mission-completed .count-enemy,
+.mission-completed span {
+    color: #666 !important;
+}
+
+/* 提示动画：目标受到打击时任务列表闪烁 */
+@keyframes strike-flash {
+    0% { background-color: rgba(255, 165, 0, 0.5); }
+    100% { background-color: transparent; }
+}
+.mission-striking {
+    animation: strike-flash 1s infinite alternate;
+    border-left: 4px solid #FFA500 !important;
+}
+
+
+/* ================= 任务结束弹窗样式 ================= */
+.mission-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.75); /* 黑色半透明遮罩 */
+    z-index: 9999; /* 覆盖在最顶层 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mission-modal-content {
+    background: linear-gradient(180deg, rgba(30, 35, 45, 0.95) 0%, rgba(15, 18, 25, 0.95) 100%);
+    border: 1px solid #00dfff;
+    border-radius: 8px;
+    padding: 30px 60px;
+    text-align: center;
+    box-shadow: 0 0 30px rgba(0, 191, 255, 0.4);
+    color: #fff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tech-button {
+    margin-top: 15px;
+    padding: 8px 25px;
+    background-color: rgba(0, 191, 255, 0.1);
+    border: 1px solid #00dfff;
+    color: #00dfff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.tech-button:hover {
+    background-color: rgba(0, 191, 255, 0.4);
+    color: #fff;
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
+}

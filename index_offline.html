@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+    <!-- html标签名称 -->
+    <title>任务规划可视化</title>
+    
+    <!-- 离线引入Cesium核心JS库与样式表 -->
+    <script src="../Cesium/Cesium.js"></script>
+    <link rel="stylesheet" href="../Cesium/Widgets/widgets.css">
+
+    <!-- 数学计算函数 -->
+    <script src="../src/utils/gl-matrix-min.js"></script>
+
+    <!-- 3D绘图函数 -->
+    <script src="../src/utils/echarts.min.js"></script>
+    <script src="../src/utils/echarts-gl.min.js"></script>
+
+    
+    <!-- 卫星和轨道相关脚本 -->
+    <script src="../src/satellite/sat_orbit.js"></script>
+    <script src="../src/satellite/orbit_function.js"></script>
+
+    <!-- 通信相关脚本 -->
+    <script src="../src/communication/kafkaDataParser.js"></script>
+    <script src="../src/communication/kafka_fun.js"></script>
+    <script src="../src/communication/websocket_connect.js"></script>
+
+    <!-- 图表绘制相关脚本 -->
+    <script src="../src/services/analysis_charts.js"></script>
+
+
+    <!-- 服务和控件相关脚本 -->
+    <script src="../src/services/buttonEvent.js"></script>
+    <script src="../src/services/subViewer_fun.js"></script>
+
+    <!-- 样式    -->
+    <link rel="stylesheet" href="../public/css/style.css">
+
+    
+
+</head>
+<body>
+    <!-- 主窗口 -->
+    <div id="mainViewer">
+
+        <!-- <button id="toggleSubViewerBtn" class="inspection-btn">开启星群检视</button> -->
+
+        <button id="playPauseBtn" class="play-pause-btn" title="开始渲染">▶</button>
+
+        <div class="header-bar" id="scene-header">
+            <div class="header-item">
+                <span class="status-indicator status-disconnected" id="kafka-connection-status"></span>
+                <span id="kafka-connection-text">未连接</span>
+            </div>
+            <div class="header-item">时刻: <span id="simulation-time">0</span> s</div>
+            <div class="header-item">场景ID: <span id="header-scene-id">-</span></div>
+            <div class="header-item">场景名称: <span id="header-scene-name">未加载</span></div>
+            <div class="header-item">起始时间: <span id="header-start-time">-</span></div>
+            <div class="header-item">终止时间: <span id="header-end-time">-</span></div>
+            <div class="header-item">
+                我方卫星: <span id="header-friend-count" class="count-friend">0</span> 
+                | 
+                敌方卫星: <span id="header-enemy-count" class="count-enemy">0</span>
+            </div>
+        </div>
+
+
+        <div class="speed-control-bar" id="speed-control-bar">
+            <div class="speed-selector">
+                <label style="color:#ffffff; font-size:12px; margin-right:5px;">帧率:</label>
+                <select id="fps-dropdown" class="tech-select">
+                    <option value="30" selected>30 帧/秒</option>
+                    <option value="60">60 帧/秒</option>
+                    <option value="90">90 帧/秒</option>
+                    <option value="120">120 帧/秒</option>
+                </select>
+            </div>
+
+            <div class="speed-selector">
+                <label style="color:#ffffff; font-size:12px; margin-right:5px; margin-left:15px;">每帧间隔:</label>
+                <select id="dt-dropdown" class="tech-select">
+                    <option value="1" selected>1 s 仿真时间</option>
+                    <option value="2">2 s 仿真时间</option>
+                    <option value="3">3 s 仿真时间</option>
+                    <option value="5">5 s 仿真时间</option>
+                    <option value="10">10 s 仿真时间</option>
+                    <option value="100">100 s 仿真时间</option>
+                </select>
+            </div>
+
+            <div class="speed-display" style="margin-left: auto;">
+                总流速: <span id="current-speed-text" style="color: #fff; font-weight: bold; margin: 0 4px;">30</span> <span style="color: #aaa; font-size: 12px;">倍</span>
+            </div>
+        </div>
+
+
+
+        <!-- 左侧 -->
+        <div class="side-panel-container left-container">
+
+            <div class="panel-box">
+                <div class="panel-header" id="status-header">
+                    <span class="panel-icon" id="status-icon">▼</span><span class="panel-title">当前状态</span>
+                </div>
+                <div class="panel-content show" id="status-content">
+                    <div style="padding: 15px 10px; color: #ffffff; font-size: 18px; font-weight: bold; text-align: center; letter-spacing: 2px; text-shadow: 0 0 8px rgba(0, 223, 255, 0.6);" id="current-phase-text">
+                        等待状态数据...
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">我方星群散点图</span>
+                </div>
+                <div class="panel-content">
+                    <div id="friend-scatter-chart" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">目标星群散点图</span>
+                </div>
+                <div class="panel-content">
+                    <div id="target-scatter-chart" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">相对距离时序图</span>
+                </div>
+                <div class="panel-content">
+                    <div id="dist-time-chart" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- 右侧 -->
+        <div class="side-panel-container right-container">
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">通信链路状态表</span>
+                </div>
+                <div class="panel-content">
+                    <ul id="link-list-ul" class="unified-list">
+                        <li class="empty-tip">等待通信链路数据...</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">任务分配表</span>
+                </div>
+                <div class="panel-content">
+                    <ul id="mission-list-ul" class="unified-list">
+                        <li class="empty-tip">等待任务数据...</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">任务星与目标相对距离曲线</span>
+                </div>
+                <div class="panel-content">
+                    <div id="task-dist-chart" style="width: 100%; height: 200px;"></div>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">我方星群初始轨道根数</span>
+                </div>
+                <div class="panel-content">
+                    <ul id="friend-orbit-ul" class="unified-list orbit-list">
+                        <li class="empty-tip">等待轨道数据...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">敌方星群初始轨道根数</span>
+                </div>
+                <div class="panel-content">
+                    <ul id="enemy-orbit-ul" class="unified-list orbit-list">
+                        <li class="empty-tip">等待轨道数据...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-header">
+                    <span class="panel-icon">▼</span><span class="panel-title">目标感知跟踪误差</span>
+                </div>
+                <div class="panel-content">
+                    <ul id="perception-error-ul" class="unified-list">
+                        <li class="empty-tip">等待感知数据接入...</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    
+    <div id="mission-end-modal" class="mission-modal" style="display: none;">
+        <div class="mission-modal-content">
+            <h2 style="color: #00dfff; margin-top: 0; letter-spacing: 2px;">仿真结束</h2>
+            <p style="font-size: 16px; margin: 25px 0;">
+                成功打击目标数：<span id="final-destroyed-count" style="color: #ff4c4c; font-size: 28px; font-weight: bold; margin-left: 10px;">0</span>
+            </p>
+
+            <div style="max-height: 200px; overflow-y: auto; margin-bottom: 20px; border: 1px solid rgba(0, 223, 255, 0.3); border-radius: 4px; padding: 10px; background: rgba(0, 0, 0, 0.4);">
+                <ul id="stats-detail-list" class="unified-list" style="margin: 0; padding: 0; list-style: none;">
+                    </ul>
+            </div>
+
+
+            <button id="close-modal-btn" class="tech-button">关闭窗口</button>
+        </div>
+    </div>
+
+
+    <!-- 副窗口 -->
+    <div id="subViewer"></div>
+    <script>
+        // 颜色映射
+        const colorMap = {
+            '红色': Cesium.Color.RED,
+            '绿色': Cesium.Color.GREEN,
+            '蓝色': Cesium.Color.BLUE,
+            '黄色': Cesium.Color.YELLOW,
+            '白色': Cesium.Color.WHITE,
+            '橙色': Cesium.Color.ORANGE,
+            '紫色': Cesium.Color.PURPLE,
+            '粉色': Cesium.Color.PINK,
+            '草绿': Cesium.Color.LIME,
+        };
+
+        // 通信组颜色
+        const commGroupColors = {
+            'A': Cesium.Color.RED,
+            'B': Cesium.Color.GREEN,
+            'C': Cesium.Color.BLUE,
+            'D': Cesium.Color.YELLOW,
+            'E': Cesium.Color.ORANGE,
+            'F': Cesium.Color.PURPLE,
+            'G': Cesium.Color.CYAN,
+            'H': Cesium.Color.MAGENTA,
+            'I': Cesium.Color.LIME,
+            'J': Cesium.Color.PINK
+        };
+
+        Cesium.Ion.defaultAccessToken = ""; // 禁用在线令牌请求
+        // ——————————————————————————— 主窗口与副窗口的初始化—————————————————————————————————————————————————
+        const earth_texture_path = '../Cesium/Assets/Textures/NaturalEarthII';
+        // const moon_texture_path = '../Cesium/Assets/Textures/moonsmall.jpg';
+        
+        // 创建一个工厂函数，每次调用都返回一个全新的图层实例，避免多个Viewer共享导致WebGL上下文冲突
+        function createOfflineImageryLayer() {
+            // 使用 UrlTemplateImageryProvider 彻底绕过 AJAX 请求配置文件
+            // 直接按 TMS (Tile Map Service) 的文件夹规律去请求具体的 .jpg 图片
+            const provider = new Cesium.UrlTemplateImageryProvider({
+                url: earth_texture_path + '/{z}/{x}/{reverseY}.jpg',
+                maximumLevel: 2, 
+                // NaturalEarthII 默认使用的是经纬度投影 (EPSG:4326)
+                tilingScheme: new Cesium.GeographicTilingScheme() 
+            });
+            
+            // 监听底图加载错误
+            provider.errorEvent.addEventListener(function(error) {
+                console.error('底图加载失败，请检查路径或是否使用了本地Server环境打开：', error);
+            });
+
+            // Cesium 1.114+ 版本推荐使用 baseLayer: new Cesium.ImageryLayer(provider)
+            return new Cesium.ImageryLayer(provider);
+        }
+
+        // 主窗口创建与初始化 
+        const mainViewer = new Cesium.Viewer('mainViewer', {
+            baseLayer: createOfflineImageryLayer(),
+            baseLayerPicker: false, // 隐藏图层选择器（无在线图层可选）
+            geocoder: false, // 禁用在线地理编码
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            vrButton: false,
+            requestRenderMode: false, // 离线优化：减少渲染开销，提升帧率（卫星轨道必备）
+        });
+ 
+        // 时间控制
+        mainViewer.clock.shouldAnimate = true;
+        mainViewer.clock.clockStep = Cesium.ClockStep.SYSTEM_CLOCK_MULTIPLIER; // 跟真实时间走，但按倍速
+        mainViewer.clock.multiplier = 360; // 例如：10秒播完1小时
+        
+        // 地球基础配置
+        mainViewer.scene.fog.enabled = false;          // 关闭雾化，必加
+        mainViewer.scene.globe.enableLighting = false; // 关闭光照，必加
+        mainViewer.scene.globe.showGroundAtmosphere = false; // 关闭地球大气光晕，避免遮挡，必加
+        mainViewer.scene.skyAtmosphere.enabled = false; // 关闭天空大气，星空更干净
+        mainViewer.scene.globe.show = true;
+
+
+        const subViewer = new Cesium.Viewer('subViewer',{
+            baseLayer: createOfflineImageryLayer(), // 【关键】调用函数生成一个全新的、独立的图层
+            baseLayerPicker: false, // 隐藏图层选择器（无在线图层可选）
+            geocoder: false, // 禁用在线地理编码
+            navigationHelpButton: false,
+            animation: false,
+            timeline: false,
+            vrButton: false,
+            sceneModePicker: false,
+            homeButton: false,
+            fullscreenButton: false,
+            
+        })
+        subViewer.scene.fog.enabled = false;          // 关闭雾化，必加
+        subViewer.scene.globe.enableLighting = false; // 关闭光照，必加
+        subViewer.scene.globe.showGroundAtmosphere = false; // 关闭地球大气光晕，避免遮挡，必加
+        subViewer.scene.skyAtmosphere.enabled = false; // 关闭天空大气，星空更干净
+        subViewer.scene.globe.show = true;
+        // 初始化：停止副窗口时钟动画（默认不渲染）
+        subViewer.clock.shouldAnimate = false;
+
+
+        // ——————————————————————————————————————————————————————————————————————————————————————————————
+
+
+        // DOM元素引用 
+        const kafkaConnectionStatus = document.getElementById('kafka-connection-status'); // kafka连接状态
+        const kafkaConnectionText = document.getElementById('kafka-connection-text'); // kafka连接状态文本
+        const satelliteCount = document.getElementById('satelliteCount'); // 卫星总数（我方星+目标星）
+        const currentScene = document.getElementById('current-scene'); 
+        const simulationTime = document.getElementById('simulation-time'); // 仿真时间（当前对应的仿真时刻）
+
+        // 按钮事件监听      
+        const dtShowInput = document.getElementById('dtShowInput');
+        const speedInput = document.getElementById('speedInput');
+        const applyParamsBtn = document.getElementById('applyParamsBtn');
+        
+        // 存储卫星实体、扫描锥和通信线（以键值对Map的形式）
+        const satellites_friend = new Map(); // 我方卫星，键为卫星的数字ID
+        const satellites_enemey = new Map(); // 敌方卫星，键为卫星的数字ID
+
+        // 全局状态变量
+        let showAllNumbers = true;      // 卫星数字编号显示状态
+        // let showSatModels = true;       // 卫星模型显示状态
+        // let showSatPoints = false;      // 卫星质心显示状态
+
+        // —————————————————————————————————————————————————— 按钮事件监听 ——————————————————————————————————————————————————
+
+        // 应用输入的DT_ShOW与SPEED
+        // applyParamsBtn.addEventListener('click', applySPEED);
+        // 绑定开关按钮事件（放在按钮事件监听区域）
+        // 绑定开关按钮事件（放在DOM加载完成后）
+        // document.addEventListener('DOMContentLoaded', () => {
+        //     document.getElementById('toggleSubViewerBtn').addEventListener('click', toggleSubViewer);
+        // });
+        // ——————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+        
+        // 页面加载完成后初始化Kafka消费者
+        window.addEventListener('load', () => {
+            initWebSocket();
+        });
+
+    </script>
+</body>
+</html>
